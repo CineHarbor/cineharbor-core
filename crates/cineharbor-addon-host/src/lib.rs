@@ -202,7 +202,10 @@ mod tests {
             version: "1.0.0".into(),
             name: id.into(),
             description: None,
-            resources: vec![cineharbor_addon_sdk::Resource::Catalog, cineharbor_addon_sdk::Resource::Stream],
+            resources: vec![
+                cineharbor_addon_sdk::Resource::Catalog,
+                cineharbor_addon_sdk::Resource::Stream,
+            ],
             types: vec![ContentType::Movie],
             catalogs: vec![],
             id_prefixes: None,
@@ -250,7 +253,9 @@ mod tests {
         let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
         let addr = listener.local_addr().unwrap();
         tokio::spawn(async move {
-            axum::serve(listener, app.into_make_service()).await.unwrap();
+            axum::serve(listener, app.into_make_service())
+                .await
+                .unwrap();
         });
         format!("http://{addr}")
     }
@@ -274,7 +279,10 @@ mod tests {
     async fn aggregates_catalog_and_streams() {
         let base = spawn(sample_host().router()).await;
         let client = cineharbor_addon_sdk::AddonClient::new(base).unwrap();
-        let cat = client.catalog(ContentType::Movie, "top", None, None).await.unwrap();
+        let cat = client
+            .catalog(ContentType::Movie, "top", None, None)
+            .await
+            .unwrap();
         assert_eq!(cat.metas.len(), 5);
         let streams = client.streams(ContentType::Movie, "tt1").await.unwrap();
         assert_eq!(streams.streams.len(), 2);

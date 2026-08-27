@@ -39,6 +39,13 @@ use axum::{
 };
 use base64::{Engine as _, engine::general_purpose::STANDARD as BASE64_STANDARD};
 use cbc::{Decryptor, Encryptor};
+use cineharbor_download::{DesktopDownloadEngine, DesktopDownloadEngineSnapshot};
+use cineharbor_profile::{LocalDesktopProfileStore, ProfileDomain};
+use cineharbor_storage::sqlite::{DesktopSqlite, SqliteDatabaseInfo};
+use cineharbor_sync::{
+    PROFILE_SYNC_ADMIN_SETTINGS_DOMAIN, PROFILE_SYNC_USER_DATA_DOMAINS, ProfileSyncClient,
+    ProfileSyncSession, ProfileSyncStatusResponse, default_profile_sync_selected_domains,
+};
 use clap::Parser;
 use flate2::{Compression, read::GzDecoder, write::GzEncoder};
 use futures::{future::join_all, stream};
@@ -49,13 +56,6 @@ use hyper::server::conn::http1;
 #[cfg(target_os = "windows")]
 use hyper_util::{rt::TokioIo, service::TowerToHyperService};
 use md5::Md5;
-use cineharbor_download::{DesktopDownloadEngine, DesktopDownloadEngineSnapshot};
-use cineharbor_profile::{LocalDesktopProfileStore, ProfileDomain};
-use cineharbor_storage::sqlite::{DesktopSqlite, SqliteDatabaseInfo};
-use cineharbor_sync::{
-    PROFILE_SYNC_ADMIN_SETTINGS_DOMAIN, PROFILE_SYNC_USER_DATA_DOMAINS, ProfileSyncClient,
-    ProfileSyncSession, ProfileSyncStatusResponse, default_profile_sync_selected_domains,
-};
 use rand::Rng;
 use regex::Regex;
 use reqwest::header::HeaderMap as ReqwestHeaderMap;
@@ -7884,8 +7884,8 @@ mod tests {
     use std::sync::{Arc, Mutex};
 
     use axum::{body::to_bytes, http::Request, response::IntoResponse};
-    use futures::StreamExt;
     use cineharbor_profile::{Favorite, FollowRecord, PlayRecord, SkipConfig};
+    use futures::StreamExt;
     use tower::ServiceExt;
 
     fn empty_remote_profile_snapshot() -> Value {
@@ -8105,7 +8105,10 @@ mod tests {
             .expect("load sqlite admin persistence");
 
         assert!(!legacy_path.exists());
-        assert_eq!(persistence.config.site_config.site_name, "SQLite CineHarbor");
+        assert_eq!(
+            persistence.config.site_config.site_name,
+            "SQLite CineHarbor"
+        );
     }
 
     #[tokio::test]
@@ -8133,7 +8136,10 @@ mod tests {
                     .uri("/api/proxy/vod/m3u8")
                     .header(ORIGIN, "https://tauri.localhost")
                     .header("Access-Control-Request-Method", "GET")
-                    .header("Access-Control-Request-Headers", "x-cineharbor-download-intent")
+                    .header(
+                        "Access-Control-Request-Headers",
+                        "x-cineharbor-download-intent",
+                    )
                     .body(Body::empty())
                     .expect("cors preflight request"),
             )
@@ -9758,7 +9764,10 @@ segment0.ts
         let persistence = state
             .load_admin_persistence()
             .expect("load imported admin persistence");
-        assert_eq!(persistence.config.site_config.site_name, "Imported CineHarbor");
+        assert_eq!(
+            persistence.config.site_config.site_name,
+            "Imported CineHarbor"
+        );
         assert_eq!(
             resolve_owner_username_for_import(&persistence.config).as_deref(),
             Some("old-owner")
@@ -9872,7 +9881,12 @@ segment0.ts
             .load_admin_persistence()
             .expect("load refreshed admin persistence");
         assert!(!persistence.config.config_subscribtion.last_check.is_empty());
-        assert!(persistence.config.config_file.contains("Updated CineHarbor"));
+        assert!(
+            persistence
+                .config
+                .config_file
+                .contains("Updated CineHarbor")
+        );
         assert!(
             persistence
                 .config

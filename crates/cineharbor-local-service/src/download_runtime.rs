@@ -15,11 +15,11 @@ use axum::{
         sse::{Event, Sse},
     },
 };
-use futures::stream;
 use cineharbor_download::{
     DesktopDownloadEngine, DesktopDownloadEngineSettingsUpdate, DesktopDownloadEngineSnapshot,
     DesktopDownloadTask, DesktopDownloadTaskStatus,
 };
+use futures::stream;
 use regex::Regex;
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};

@@ -658,7 +658,10 @@ mod tests {
             .profile_sync
             .forward_logout(
                 Some(&upstream.base_url),
-                cineharbor_sync::ProfileSyncForwardRequest::new(reqwest::Method::POST, "/api/logout"),
+                cineharbor_sync::ProfileSyncForwardRequest::new(
+                    reqwest::Method::POST,
+                    "/api/logout",
+                ),
             )
             .await
             .expect("logout outcome");
@@ -701,9 +704,12 @@ mod tests {
             .profile_sync
             .forward_login(
                 Some(base_url),
-                cineharbor_sync::ProfileSyncForwardRequest::new(reqwest::Method::POST, "/api/login")
-                    .with_content_type(Some("application/json".to_string()))
-                    .with_body(json!({ "username": username }).to_string().into_bytes()),
+                cineharbor_sync::ProfileSyncForwardRequest::new(
+                    reqwest::Method::POST,
+                    "/api/login",
+                )
+                .with_content_type(Some("application/json".to_string()))
+                .with_body(json!({ "username": username }).to_string().into_bytes()),
             )
             .await
             .expect("login outcome")
