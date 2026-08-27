@@ -19,6 +19,7 @@ html-escape.workspace = true
 hyper.workspace = true
 hyper-util.workspace = true
 md-5 = "0.10.6"
+cineharbor-addon-host = { path = "../cineharbor-addon-host" }
 cineharbor-download = { path = "../cineharbor-download" }
 cineharbor-profile = { path = "../cineharbor-profile" }
 cineharbor-storage = { path = "../cineharbor-storage" }

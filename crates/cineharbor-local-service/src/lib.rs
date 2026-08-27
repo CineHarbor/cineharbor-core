@@ -1885,7 +1885,10 @@ type AppResult<T> = std::result::Result<T, AppError>;
 pub async fn run(cli: Cli) -> Result<()> {
     let state = AppState::from_cli(&cli)?;
     spawn_background_tasks(state.clone());
-    let app = build_router(state.clone());
+    let app = build_router(state.clone()).nest(
+        "/addons",
+        cineharbor_addon_host::AddonHost::default().router(),
+    );
     let listener = TcpListener::bind(state.bind_addr())
         .await
         .context("failed to bind local service listener")?;

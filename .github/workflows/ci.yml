@@ -11,6 +11,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Checkout cineharbor-addon-sdk (cross-repo path dep)
+        run: git clone --depth 1 https://github.com/CineHarbor/cineharbor-addon-sdk.git ../cineharbor-addon-sdk
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: rustfmt, clippy
