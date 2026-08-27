@@ -70,6 +70,7 @@ use tower::ServiceExt;
 use tracing::{info, warn};
 use url::{Url, form_urlencoded};
 
+mod addon_live;
 mod content_detail;
 mod content_search;
 mod download_runtime;
@@ -1885,10 +1886,10 @@ type AppResult<T> = std::result::Result<T, AppError>;
 pub async fn run(cli: Cli) -> Result<()> {
     let state = AppState::from_cli(&cli)?;
     spawn_background_tasks(state.clone());
-    let app = build_router(state.clone()).nest(
-        "/addons",
-        cineharbor_addon_host::AddonHost::default().router(),
-    );
+    let addon_host = cineharbor_addon_host::AddonHost::with(std::sync::Arc::new(
+        addon_live::BuiltinLiveAddon::new(state.clone()),
+    ));
+    let app = build_router(state.clone()).nest("/addons", addon_host.router());
     let listener = TcpListener::bind(state.bind_addr())
         .await
         .context("failed to bind local service listener")?;
