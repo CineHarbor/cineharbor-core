@@ -5,3 +5,7 @@ edition.workspace = true
 license.workspace = true
 
 [dependencies]
+cineharbor-download = { path = "../cineharbor-download" }
+cineharbor-profile = { path = "../cineharbor-profile" }
+cineharbor-storage = { path = "../cineharbor-storage" }
+cineharbor-sync = { path = "../cineharbor-sync" }

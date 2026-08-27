@@ -5,3 +5,8 @@ edition.workspace = true
 license.workspace = true
 
 [dependencies]
+anyhow.workspace = true
+cineharbor-storage = { path = "../cineharbor-storage" }
+rand.workspace = true
+serde.workspace = true
+serde_json.workspace = true
