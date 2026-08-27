@@ -72,6 +72,7 @@ use url::{Url, form_urlencoded};
 
 mod addon_douban;
 mod addon_live;
+mod addon_vod;
 mod content_detail;
 mod content_search;
 mod download_runtime;
@@ -1892,6 +1893,9 @@ pub async fn run(cli: Cli) -> Result<()> {
             state.clone(),
         )))
         .add(std::sync::Arc::new(addon_douban::BuiltinDoubanAddon::new(
+            state.clone(),
+        )))
+        .add(std::sync::Arc::new(addon_vod::BuiltinVodAddon::new(
             state.clone(),
         )));
     let app = build_router(state.clone()).nest("/addons", addon_host.router());

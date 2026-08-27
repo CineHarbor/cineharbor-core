@@ -46,7 +46,7 @@ pub(crate) async fn get_content_detail(
     Ok(response)
 }
 
-async fn fetch_content_detail(
+pub(crate) async fn fetch_content_detail(
     client: &reqwest::Client,
     api_site: &ApiSite,
     id: &str,
