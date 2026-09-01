@@ -1,13 +1,15 @@
-//! CineHarbor 生态核心门面。
+//! CineHarbor 生态核心门面（纯状态机库，目标对标 `stremio-core`）。
 //!
-//! 聚合 storage / sync / profile / download 四个功能 crate，对外提供统一入口。
-//! 对标 Stremio 的 `stremio-core`：后续（P2/P3）会把内容模型、addon 聚合与本地
-//! 状态机逐步收敛到这里，作为各客户端的唯一数据面依赖。
+//! 本 crate 只承载**平台无关的纯逻辑**：内容模型、库/同步、profile、addon 聚合与
+//! 派发的数据类型与算法。不含网络 I/O、不含 sqlite、不含媒体代理——这些属于平台
+//! 实现（native：sqlite/reqwest）或 remote addon（Stremio 协议 HTTP），见
+//! `docs/adr/0006-stremio-faithful-core-wasm.md` 与
+//! `docs/plans/stremio-faithful-cutover-plan.md`。
 //!
-//! `cineharbor-local-service` 是独立二进制（本地守护服务 + addon host），不在此
-//! 重导出，单独由桌面端作为 sidecar 使用。
+//! 双编译目标：native + `wasm32-unknown-unknown`。
 
-pub use cineharbor_download as download;
-pub use cineharbor_profile as profile;
-pub use cineharbor_storage as storage;
-pub use cineharbor_sync as sync;
+pub mod addons;
+pub mod model;
+pub mod storage;
+pub mod sync;
+pub mod transport;

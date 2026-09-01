@@ -17,6 +17,7 @@ use axum::{Json, Router};
 use serde::Serialize;
 
 use cineharbor_addon_sdk::addon::router as addon_router;
+use cineharbor_core::addons::{merge_catalogs, merge_streams};
 pub use cineharbor_addon_sdk::*;
 
 type Addons = Vec<Arc<dyn Addon>>;
@@ -117,17 +118,18 @@ async fn catalog_handler(
     Path((ty, id)): Path<(String, String)>,
 ) -> Result<Json<CatalogResponse>, StatusCode> {
     let ty = parse_ty(&ty).ok_or(StatusCode::BAD_REQUEST)?;
-    let mut metas = Vec::new();
+    let id = strip_json(&id).to_string();
+    let mut responses = Vec::with_capacity(addons.len());
     for addon in &addons {
         let req = CatalogRequest {
             ty,
-            id: strip_json(&id).to_string(),
+            id: id.clone(),
             extra: None,
             skip: None,
         };
-        metas.extend(addon.catalog(req).await.metas);
+        responses.push(addon.catalog(req).await);
     }
-    Ok(Json(CatalogResponse { metas }))
+    Ok(Json(merge_catalogs(responses)))
 }
 
 async fn catalog_extra_handler(
@@ -142,7 +144,7 @@ async fn catalog_extra_handler(
         let (name, value) = seg.split_once('=').ok_or(StatusCode::BAD_REQUEST)?;
         (Some((name.to_string(), value.to_string())), None)
     };
-    let mut metas = Vec::new();
+    let mut responses = Vec::with_capacity(addons.len());
     for addon in &addons {
         let req = CatalogRequest {
             ty,
@@ -150,9 +152,9 @@ async fn catalog_extra_handler(
             extra: extra.clone(),
             skip,
         };
-        metas.extend(addon.catalog(req).await.metas);
+        responses.push(addon.catalog(req).await);
     }
-    Ok(Json(CatalogResponse { metas }))
+    Ok(Json(merge_catalogs(responses)))
 }
 
 async fn meta_handler(
@@ -175,11 +177,11 @@ async fn stream_handler(
 ) -> Result<Json<StreamsResponse>, StatusCode> {
     let ty = parse_ty(&ty).ok_or(StatusCode::BAD_REQUEST)?;
     let id = strip_json(&id);
-    let mut streams = Vec::new();
+    let mut responses = Vec::with_capacity(addons.len());
     for addon in &addons {
-        streams.extend(addon.streams(ty, id).await.streams);
+        responses.push(addon.streams(ty, id).await);
     }
-    Ok(Json(StreamsResponse { streams }))
+    Ok(Json(merge_streams(responses)))
 }
 
 #[cfg(test)]

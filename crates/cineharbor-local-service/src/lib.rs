@@ -70,6 +70,11 @@ use tower::ServiceExt;
 use tracing::{info, warn};
 use url::{Url, form_urlencoded};
 
+pub use cineharbor_core::model::{
+    ContentSuggestion, LiveChannel, LiveEpgData, LiveProgram, SearchResponse, SearchResult,
+    SuggestionsResponse,
+};
+
 mod addon_douban;
 mod addon_live;
 mod addon_vod;
@@ -1206,39 +1211,6 @@ struct LiveSourceConfig {
     disabled: bool,
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq)]
-pub struct SearchResult {
-    pub id: String,
-    pub title: String,
-    pub poster: String,
-    pub episodes: Vec<String>,
-    pub episodes_titles: Vec<String>,
-    pub source: String,
-    pub source_name: String,
-    pub class: Option<String>,
-    pub year: String,
-    pub desc: Option<String>,
-    pub type_name: Option<String>,
-    pub douban_id: Option<i64>,
-}
-
-#[derive(Debug, Serialize)]
-struct SearchResponse {
-    results: Vec<SearchResult>,
-}
-
-#[derive(Debug, Serialize, Clone, PartialEq)]
-struct ContentSuggestion {
-    text: String,
-    r#type: &'static str,
-    score: f64,
-}
-
-#[derive(Debug, Serialize)]
-struct SuggestionsResponse {
-    suggestions: Vec<ContentSuggestion>,
-}
-
 #[derive(Debug, Serialize)]
 struct DoubanRatingsResponse {
     ratings: BTreeMap<String, String>,
@@ -1668,35 +1640,6 @@ struct DesktopAdminConfigResult {
     role: String,
     #[serde(rename = "Config")]
     config: DesktopAdminConfig,
-}
-
-#[derive(Debug, Serialize, Clone, PartialEq, Eq)]
-#[serde(rename_all = "camelCase")]
-struct LiveChannel {
-    id: String,
-    #[serde(rename = "tvgId")]
-    tvg_id: String,
-    name: String,
-    logo: String,
-    group: String,
-    url: String,
-}
-
-#[derive(Debug, Serialize, Clone, PartialEq, Eq)]
-struct LiveProgram {
-    start: String,
-    end: String,
-    title: String,
-}
-
-#[derive(Debug, Serialize, Clone)]
-#[serde(rename_all = "camelCase")]
-struct LiveEpgData {
-    #[serde(rename = "tvgId")]
-    tvg_id: String,
-    source: String,
-    epg_url: String,
-    programs: Vec<LiveProgram>,
 }
 
 #[derive(Debug, Clone)]

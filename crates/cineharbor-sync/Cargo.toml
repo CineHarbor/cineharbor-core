@@ -5,6 +5,7 @@ edition.workspace = true
 license.workspace = true
 
 [dependencies]
+cineharbor-core = { path = "../cineharbor-core" }
 reqwest.workspace = true
 serde.workspace = true
 serde_json.workspace = true

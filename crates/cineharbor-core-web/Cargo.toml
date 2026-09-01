@@ -1,0 +1,24 @@
+[package]
+name = "cineharbor-core-web"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+cineharbor-core = { path = "../cineharbor-core" }
+# 跨仓依赖：crates.io 未发布前用相对 path（ADR-0003）。
+cineharbor-addon-protocol = { path = "../../../cineharbor-addon-sdk/crates/cineharbor-addon-protocol" }
+async-trait.workspace = true
+http = "1"
+serde_json.workspace = true
+wasm-bindgen = "=0.2.126"
+# 与 wasm-bindgen 0.2.126 配套的版本（crates.io 查询核实，见 .agnir/evidence）。
+wasm-bindgen-futures = "=0.4.76"
+js-sys = "=0.3.103"
+
+[dev-dependencies]
+wasm-bindgen-test = "=0.3.76"
+base64.workspace = true

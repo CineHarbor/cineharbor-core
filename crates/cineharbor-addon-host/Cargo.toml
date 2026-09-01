@@ -7,6 +7,7 @@ license.workspace = true
 [dependencies]
 # 跨仓依赖：未发布 crates.io 前用相对 path（ADR-0003）。CI 需同时 checkout 兄弟仓。
 cineharbor-addon-sdk = { path = "../../../cineharbor-addon-sdk/crates/cineharbor-addon-sdk" }
+cineharbor-core = { path = "../cineharbor-core" }
 axum.workspace = true
 serde.workspace = true
 
