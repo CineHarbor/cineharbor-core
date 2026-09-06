@@ -8,4 +8,4 @@ CineHarbor 的 Rust 核心：本地数据面与守护服务，对应 Stremio `st
 
 > 环境：沙箱 `workspace-write` 下 `~/.cargo` 只读；需要下载新 crate 时用 `CARGO_HOME=/Users/jay/Code/CineHarbor/.cargo-home`。
 
-- Agnir 操作基线：`iorLab/agnir` 稳定发布 `v0.1.0`（revision `2a0cb7bf2068b11f361e315670b2f2dc497b2588`，distribution `agnir-agent-skill`），2026-09-01 兼容操作升级。
+- Agnir 操作基线：`iorLab/agnir` 稳定发布 `v1.0.0`（revision `6d16dcfd17b8e9f22fd25804e22b9f8a516d06c3`，distribution `agnir-agent-skill`）；2026-09-01 经 Principal 授权完成兼容线迁移 Core `0.1` → `1.0`（经 0.2 lineage 迁移 + 稳定晋升）。
