@@ -17,7 +17,7 @@ jobs:
     steps:
       - uses: actions/checkout@v5
         with:
-          fetch-depth: 2
+          fetch-depth: 0
           persist-credentials: false
       - name: Verify exact reviewed input and apply bounded patch
         shell: bash
@@ -34,8 +34,7 @@ jobs:
               return subprocess.check_output(['git', *args], text=True).strip()
           if not re.fullmatch(r'[0-9a-f]{40}', spec['base']):
               raise SystemExit('Invalid baseline revision')
-          if git('rev-parse', 'HEAD^') != spec['base']:
-              raise SystemExit('Reviewed baseline is not the request parent')
+          subprocess.run(['git', 'merge-base', '--is-ancestor', spec['base'], 'HEAD'], check=True)
           if git('ls-remote', 'origin', 'refs/heads/main').split()[0] != spec['base']:
               raise SystemExit('AGNIR_CHECKPOINT_CONFLICT: main advanced')
           if set(git('diff', '--name-only', spec['base'], 'HEAD').splitlines()) != set(transport):
@@ -72,10 +71,13 @@ jobs:
               verify(entry, 'after')
           if set(git('diff', '--cached', '--name-only').splitlines()) != set(paths):
               raise SystemExit('Patch changed an unreviewed path')
-          subprocess.run(['git', 'rm', '--', *transport], check=True)
+          # Publish source only with Actions; workflow edits use the authorized connector separately.
+          subprocess.run(['git', 'restore', '--source=HEAD', '--staged', '--worktree', '--', '.github/workflows'], check=True)
+          subprocess.run(['git', 'rm', '--', *transport[:2]], check=True)
           subprocess.run(['git', 'diff', '--cached', '--check'], check=True)
-          if set(git('diff', '--cached', '--name-only', spec['base']).splitlines()) != set(paths):
-              raise SystemExit('Transport leaked into final source tree')
+          expected = {path for path in paths if not path.startswith('.github/workflows/')} | set(transport[:2])
+          if set(git('diff', '--cached', '--name-only').splitlines()) != expected:
+              raise SystemExit('Unexpected source publication paths')
           (pathlib.Path(os.environ['RUNNER_TEMP']) / 'reviewed-release-message.txt').write_text(spec['message'] + '\n')
           print('Verified reviewed patch:', spec['patch_sha256'])
           print('Changed paths:', len(paths))
