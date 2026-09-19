@@ -1,20 +1,26 @@
 # cineharbor-core Current State
 
-Target: CineHarbor **1.0.0**, release preparation in progress; **RELEASE_READY = false**. Current release authority and complete acceptance scope live in `CineHarbor/cineharbor/docs/releases/1.0.0/`.
+Target: CineHarbor **1.0.0 public release**, with release gates enforced. **RELEASE_READY = false; PUBLIC_RELEASE_EXECUTED = false.** Current release authority and acceptance scope live in `CineHarbor/cineharbor/docs/releases/1.0.0/`.
 
-## Implemented surfaces under validation
+## Implemented surfaces
 
 - `cineharbor-core`: pure model, sync types, transport abstraction, addon dispatch/merge and storage abstraction; optional native HTTP/storage implementations.
 - `cineharbor-core-web`: wasm-bindgen bridge, FetchHttpClient and addon manifest/catalog/meta/streams entrypoints.
-- Native storage, sync, profile, download, addon-host and local-service crates remain in this workspace. Duplicate local-service content implementations must be audited against all Web/Desktop consumers before retirement.
-- ADR-0006 target is in-process native/WASM core plus remote addons, not a mandatory native RPC daemon for Web content. Historical native-RPC descriptions are superseded.
+- Native storage, sync, profile, download, addon-host and local-service crates remain in this workspace.
+- ADR-0006 target is in-process native/WASM core plus remote addons, not a mandatory native RPC daemon for Web content.
 
-## CI and reproducibility
+## Final pre-version validation
 
-`ci/dependency.json` pins the sibling SDK revision. `scripts/ci-checkout.py` creates its explicit sibling layout and verifies the immutable revision. Rust is pinned to 1.98.1 with rustfmt, clippy and wasm32. CI has independent fmt, check, test, clippy and WASM lanes with fail-fast disabled. Formatting selects every owned workspace member and never formats sibling dependencies. The one-time formatter has been retired after normalization. A successful main push dispatches exactly one second clean CI run; manual runs never recursively dispatch. Formatting alone is not build/runtime acceptance.
+Main `e2bb2c6cab5cf620ab4eef34e05b254b26dc3139` passed the complete Core CI matrix twice: push run `35420232092` and clean workflow-dispatch run `35420280323`. Those runs include fmt, check, native tests/doc tests, strict Clippy and WASM compilation.
 
-Baseline `05989fb6f2fe388d8eaeb4128445ac4c61662f5a`, run `35382333866`, failed formatting and skipped later checks. After normalization, main `0de339fcd36427fbd9d3d5485949d8ec4c672f93`, run `35417912346`, actually passed fmt/check/test/WASM and failed clippy. This checkpoint fixes lint without suppressing warnings: a named addon builder, named cache-write/Douban filter parameters, lexical mutex scopes and explicit detached blocking cache tasks, plus compiler-suggested simplifications. Local pinned-toolchain strict clippy passed; all 161 native tests passed with zero failures/ignores; the doc-test command completed (no examples present); release WASM compiled. Remote main results for this changed source and browser/product/production acceptance remain pending.
+## 1.0.0 version alignment
+
+The release branch changes the Core workspace package version from `0.1.0` to `1.0.0` and updates exactly the eight owned workspace package entries in `Cargo.lock`: addon-host, core-web, core, download, local-service, profile, storage and sync. The sibling addon protocol/SDK lock entries are deliberately not rewritten because they come from the independently pinned sibling repository.
+
+This is a release-metadata change, so predecessor CI does not certify it. Complete PR CI and two post-merge main executions on one immutable SHA are required. Downstream Addon SDK/Web/Desktop pins must be updated only after the new Core main SHA is verified.
+
+See `.agnir/evidence/2026-09-19-version-1.0.0.md`.
 
 ## Continuity
 
-Project `urn:cineharbor:project:cineharbor-core`; lineage `urn:cineharbor:lineage:cineharbor-core`. Agnir Core/Profile 1.0 / repository-filesystem/1.0, operations v1.0.2 at `b5626394ec40a5cb7a28c01892acde07cc0adc8e`, remain unchanged. License baseline: CC-BY-NC-SA-4.0. No developer-specific absolute cache path or uncommitted-initialization prerequisite is required.
+Project `urn:cineharbor:project:cineharbor-core`; lineage `urn:cineharbor:lineage:cineharbor-core`. Agnir Core/Profile 1.0 / repository-filesystem/1.0, operations v1.0.2 at `b5626394ec40a5cb7a28c01892acde07cc0adc8e`, remain unchanged. License baseline: CC-BY-NC-SA-4.0.
