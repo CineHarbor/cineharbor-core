@@ -247,11 +247,11 @@ impl VodPrefetchManager {
             task
         };
 
-        if let Some(session_id) = cleanup_session_id.or(clear_full_session) {
-            if let Err(error) = self.cleanup_full_episode_session(&session_id) {
-                self.discard_pending_task(task.generation).await;
-                return Err(error);
-            }
+        if let Some(session_id) = cleanup_session_id.or(clear_full_session)
+            && let Err(error) = self.cleanup_full_episode_session(&session_id)
+        {
+            self.discard_pending_task(task.generation).await;
+            return Err(error);
         }
         if let Some(session_id) = register_full_session {
             if let Err(error) = self.cache.activate_prefetch_session(&session_id) {
@@ -519,10 +519,9 @@ impl VodPrefetchManager {
             .active
             .as_ref()
             .is_some_and(|active| active.generation == generation)
+            && let Some(active) = inner.active.take()
         {
-            if let Some(active) = inner.active.take() {
-                active.cancellation.store(true, Ordering::Release);
-            }
+            active.cancellation.store(true, Ordering::Release);
         }
     }
 

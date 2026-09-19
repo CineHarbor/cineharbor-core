@@ -560,26 +560,31 @@ fn build_local_snapshot_for_sync_domains(
         .collect::<BTreeSet<_>>();
 
     LocalProfileSnapshot {
-        play_records: selected_domains
-            .contains("playrecords")
-            .then(|| snapshot.play_records.clone())
-            .unwrap_or_default(),
-        favorites: selected_domains
-            .contains("favorites")
-            .then(|| snapshot.favorites.clone())
-            .unwrap_or_default(),
-        follow_records: selected_domains
-            .contains("follows")
-            .then(|| snapshot.follow_records.clone())
-            .unwrap_or_default(),
-        search_history: selected_domains
-            .contains("searchhistory")
-            .then(|| snapshot.search_history.clone())
-            .unwrap_or_default(),
-        skip_configs: selected_domains
-            .contains("skipconfigs")
-            .then(|| snapshot.skip_configs.clone())
-            .unwrap_or_default(),
+        play_records: if selected_domains.contains("playrecords") {
+            snapshot.play_records.clone()
+        } else {
+            Default::default()
+        },
+        favorites: if selected_domains.contains("favorites") {
+            snapshot.favorites.clone()
+        } else {
+            Default::default()
+        },
+        follow_records: if selected_domains.contains("follows") {
+            snapshot.follow_records.clone()
+        } else {
+            Default::default()
+        },
+        search_history: if selected_domains.contains("searchhistory") {
+            snapshot.search_history.clone()
+        } else {
+            Default::default()
+        },
+        skip_configs: if selected_domains.contains("skipconfigs") {
+            snapshot.skip_configs.clone()
+        } else {
+            Default::default()
+        },
     }
 }
 
@@ -1148,14 +1153,12 @@ fn summarize_upstream_body_prefix(body: &[u8], limit: usize) -> Option<String> {
     }
 
     let mut truncated = String::new();
-    let mut char_count = 0usize;
-    for ch in compact.chars() {
+    for (char_count, ch) in compact.chars().enumerate() {
         if char_count == limit {
             truncated.push_str("...");
             return Some(truncated);
         }
         truncated.push(ch);
-        char_count += 1;
     }
 
     Some(truncated)

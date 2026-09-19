@@ -627,9 +627,11 @@ impl AppState {
             status.as_u16(),
             content_type,
             expected_body_len,
-            policy,
-            current_timestamp_ms(),
-            None,
+            crate::online_vod_cache::OnlineVodCacheWriteContext {
+                policy,
+                now_ms: current_timestamp_ms(),
+                prefetch_session_id: None,
+            },
         ) {
             Ok(writer) => writer,
             Err(error) => {
@@ -674,9 +676,11 @@ impl AppState {
                 status.as_u16(),
                 content_type,
                 body,
-                policy,
-                current_timestamp_ms(),
-                prefetch_session_id,
+                crate::online_vod_cache::OnlineVodCacheWriteContext {
+                    policy,
+                    now_ms: current_timestamp_ms(),
+                    prefetch_session_id,
+                },
             )
             .map_err(|error| {
                 AppError::new(
@@ -1426,7 +1430,7 @@ impl Default for DesktopAdminPersistence {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone, Default)]
 struct DesktopAdminConfig {
     #[serde(rename = "ConfigSubscribtion", default)]
     config_subscribtion: DesktopConfigSubscribtion,
@@ -1446,22 +1450,6 @@ struct DesktopAdminConfig {
     ad_filter_config: DesktopAdFilterConfig,
     #[serde(rename = "PlayerEnhancementConfig", default)]
     player_enhancement_config: DesktopPlayerEnhancementConfig,
-}
-
-impl Default for DesktopAdminConfig {
-    fn default() -> Self {
-        Self {
-            config_subscribtion: DesktopConfigSubscribtion::default(),
-            config_file: String::new(),
-            site_config: DesktopSiteConfig::default(),
-            user_config: DesktopUserConfig::default(),
-            source_config: Vec::new(),
-            custom_categories: Vec::new(),
-            live_config: Vec::new(),
-            ad_filter_config: DesktopAdFilterConfig::default(),
-            player_enhancement_config: DesktopPlayerEnhancementConfig::default(),
-        }
-    }
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, Default)]
@@ -1832,13 +1820,13 @@ pub async fn run(cli: Cli) -> Result<()> {
     let state = AppState::from_cli(&cli)?;
     spawn_background_tasks(state.clone());
     let addon_host = cineharbor_addon_host::AddonHost::default()
-        .add(std::sync::Arc::new(addon_live::BuiltinLiveAddon::new(
+        .with_addon(std::sync::Arc::new(addon_live::BuiltinLiveAddon::new(
             state.clone(),
         )))
-        .add(std::sync::Arc::new(addon_douban::BuiltinDoubanAddon::new(
+        .with_addon(std::sync::Arc::new(addon_douban::BuiltinDoubanAddon::new(
             state.clone(),
         )))
-        .add(std::sync::Arc::new(addon_vod::BuiltinVodAddon::new(
+        .with_addon(std::sync::Arc::new(addon_vod::BuiltinVodAddon::new(
             state.clone(),
         )));
     let app = build_router(state.clone()).nest("/addons", addon_host.router());
@@ -3480,16 +3468,15 @@ async fn update_admin_user_config(
                 enabled_apis: Vec::new(),
                 tags: Vec::new(),
             };
-            if let Some(group_name) = normalize_owned_string(payload.user_group) {
-                if persistence
+            if let Some(group_name) = normalize_owned_string(payload.user_group)
+                && persistence
                     .config
                     .user_config
                     .tags
                     .iter()
                     .any(|tag| tag.name == group_name)
-                {
-                    user.tags.push(group_name);
-                }
+            {
+                user.tags.push(group_name);
             }
             persistence.config.user_config.users.push(user);
             persistence
@@ -3885,13 +3872,15 @@ async fn get_douban_recommends(
         &kind,
         page_start as usize,
         page_limit as usize,
-        category.as_deref(),
-        format.as_deref(),
-        label.as_deref(),
-        region.as_deref(),
-        year.as_deref(),
-        platform.as_deref(),
-        sort.as_deref(),
+        DoubanRecommendFilters {
+            category: category.as_deref(),
+            format: format.as_deref(),
+            label: label.as_deref(),
+            region: region.as_deref(),
+            year: year.as_deref(),
+            platform: platform.as_deref(),
+            sort: sort.as_deref(),
+        },
     )
     .map_err(|error| AppError::internal(error.to_string()))?;
     let douban_data =
@@ -3976,10 +3965,8 @@ async fn get_douban_title_search(
             )
         });
 
-        for result in join_all(tasks).await {
-            if let Ok(page) = result {
-                collected_items.extend(page.items);
-            }
+        for page in join_all(tasks).await.into_iter().flatten() {
+            collected_items.extend(page.items);
         }
     }
 
@@ -5087,10 +5074,10 @@ fn normalize_desktop_site_config(site_config: DesktopSiteConfig) -> DesktopSiteC
 fn normalize_string_list(values: Vec<String>) -> Vec<String> {
     let mut normalized = Vec::new();
     for value in values {
-        if let Some(next_value) = normalize_optional_string(Some(value)) {
-            if !normalized.iter().any(|existing| existing == &next_value) {
-                normalized.push(next_value);
-            }
+        if let Some(next_value) = normalize_optional_string(Some(value))
+            && !normalized.iter().any(|existing| existing == &next_value)
+        {
+            normalized.push(next_value);
         }
     }
     normalized
@@ -5603,10 +5590,10 @@ fn build_downstream_headers(
         headers.insert(USER_AGENT, value);
     }
 
-    if let Some(referer) = api_site.referer.as_deref() {
-        if let Ok(value) = HeaderValue::from_str(referer) {
-            headers.insert(REFERER, value);
-        }
+    if let Some(referer) = api_site.referer.as_deref()
+        && let Ok(value) = HeaderValue::from_str(referer)
+    {
+        headers.insert(REFERER, value);
     }
 
     if let Some(range_value) = request_headers.and_then(|headers| headers.get(RANGE)) {
@@ -5982,19 +5969,32 @@ async fn fetch_douban_json<T: for<'de> Deserialize<'de>>(
     response.json::<T>().await.map_err(Into::into)
 }
 
+struct DoubanRecommendFilters<'a> {
+    category: Option<&'a str>,
+    format: Option<&'a str>,
+    label: Option<&'a str>,
+    region: Option<&'a str>,
+    year: Option<&'a str>,
+    platform: Option<&'a str>,
+    sort: Option<&'a str>,
+}
+
 fn build_douban_recommend_target(
     base_url: &str,
     kind: &str,
     page_start: usize,
     page_limit: usize,
-    category: Option<&str>,
-    format: Option<&str>,
-    label: Option<&str>,
-    region: Option<&str>,
-    year: Option<&str>,
-    platform: Option<&str>,
-    sort: Option<&str>,
+    filters: DoubanRecommendFilters<'_>,
 ) -> Result<String> {
+    let DoubanRecommendFilters {
+        category,
+        format,
+        label,
+        region,
+        year,
+        platform,
+        sort,
+    } = filters;
     let mut selected_categories = serde_json::Map::new();
     selected_categories.insert(
         "类型".to_string(),
@@ -6011,10 +6011,10 @@ fn build_douban_recommend_target(
     if let Some(category) = category.filter(|value| !value.is_empty()) {
         tags.push(category.to_string());
     }
-    if category.unwrap_or_default().is_empty() {
-        if let Some(format) = format.filter(|value| !value.is_empty()) {
-            tags.push(format.to_string());
-        }
+    if category.unwrap_or_default().is_empty()
+        && let Some(format) = format.filter(|value| !value.is_empty())
+    {
+        tags.push(format.to_string());
     }
     if let Some(label) = label.filter(|value| !value.is_empty()) {
         tags.push(label.to_string());
@@ -6635,10 +6635,10 @@ fn build_live_proxy_request_headers(
         headers.insert(USER_AGENT, value);
     }
 
-    if include_range {
-        if let Some(range_value) = request_headers.and_then(|headers| headers.get(RANGE)) {
-            headers.insert(RANGE, range_value.clone());
-        }
+    if include_range
+        && let Some(range_value) = request_headers.and_then(|headers| headers.get(RANGE))
+    {
+        headers.insert(RANGE, range_value.clone());
     }
 
     headers
@@ -7004,24 +7004,23 @@ fn create_proxy_headers(
 
     apply_cors_headers(&mut headers);
 
-    if include_content_length {
-        if let Some(content_length) = content_length {
-            if let Ok(value) = HeaderValue::from_str(&content_length) {
-                headers.insert(CONTENT_LENGTH, value);
-            }
-        }
+    if include_content_length
+        && let Some(content_length) = content_length
+        && let Ok(value) = HeaderValue::from_str(&content_length)
+    {
+        headers.insert(CONTENT_LENGTH, value);
     }
 
-    if let Some(accept_ranges) = meta.accept_ranges.as_deref() {
-        if let Ok(value) = HeaderValue::from_str(accept_ranges) {
-            headers.insert(ACCEPT_RANGES, value);
-        }
+    if let Some(accept_ranges) = meta.accept_ranges.as_deref()
+        && let Ok(value) = HeaderValue::from_str(accept_ranges)
+    {
+        headers.insert(ACCEPT_RANGES, value);
     }
 
-    if let Some(content_range) = meta.content_range.as_deref() {
-        if let Ok(value) = HeaderValue::from_str(content_range) {
-            headers.insert(CONTENT_RANGE, value);
-        }
+    if let Some(content_range) = meta.content_range.as_deref()
+        && let Ok(value) = HeaderValue::from_str(content_range)
+    {
+        headers.insert(CONTENT_RANGE, value);
     }
 
     headers
@@ -7184,14 +7183,15 @@ fn parse_vod_ad_manifest(content: &str) -> ParsedVodAdManifest {
             continue;
         }
 
-        if let Some(segment) = current_segment.as_mut() {
-            if !line.is_empty() && !line.starts_with('#') {
-                segment.url = Some(line.clone());
-                segment.url_line_index = Some(index);
-                segment.is_ad_domain = is_vod_ad_domain(line);
-                segments.push(segment.clone());
-                current_segment = None;
-            }
+        if let Some(segment) = current_segment.as_mut()
+            && !line.is_empty()
+            && !line.starts_with('#')
+        {
+            segment.url = Some(line.clone());
+            segment.url_line_index = Some(index);
+            segment.is_ad_domain = is_vod_ad_domain(line);
+            segments.push(segment.clone());
+            current_segment = None;
         }
     }
 
@@ -7337,11 +7337,11 @@ fn filter_vod_manifest_ads(content: &str, config: &VodAdFilterConfig) -> Filtere
 
                 if !next_line.is_empty() && !next_line.starts_with('#') {
                     has_segments = true;
-                    if let Some(segment_index) = url_to_segment_index.get(next_line) {
-                        if !ad_indices.contains(segment_index) {
-                            all_ads = false;
-                            break;
-                        }
+                    if let Some(segment_index) = url_to_segment_index.get(next_line)
+                        && !ad_indices.contains(segment_index)
+                    {
+                        all_ads = false;
+                        break;
                     }
                 }
 
@@ -7362,12 +7362,12 @@ fn filter_vod_manifest_ads(content: &str, config: &VodAdFilterConfig) -> Filtere
 
         if !lines_to_remove.contains(&index) {
             filtered_lines.push(line.clone());
-            if !line.is_empty() && !line.starts_with('#') {
-                if let Some(segment_index) = url_to_segment_index.get(line) {
-                    if !ad_indices.contains(segment_index) {
-                        had_content_before = true;
-                    }
-                }
+            if !line.is_empty()
+                && !line.starts_with('#')
+                && let Some(segment_index) = url_to_segment_index.get(line)
+                && !ad_indices.contains(segment_index)
+            {
+                had_content_before = true;
             }
         }
     }
@@ -7723,10 +7723,10 @@ fn resolve_url(base_url: &str, relative_path: &str) -> String {
         return relative_path.to_string();
     }
 
-    if relative_path.starts_with("//") {
-        if let Ok(base_url) = Url::parse(base_url) {
-            return format!("{}{}", base_url.scheme(), relative_path);
-        }
+    if relative_path.starts_with("//")
+        && let Ok(base_url) = Url::parse(base_url)
+    {
+        return format!("{}{}", base_url.scheme(), relative_path);
     }
 
     match Url::parse(base_url)
@@ -7740,21 +7740,21 @@ fn resolve_url(base_url: &str, relative_path: &str) -> String {
 
 fn fallback_resolve_url(base_url: &str, relative_path: &str) -> String {
     let mut base = base_url.to_string();
-    if !base.ends_with('/') {
-        if let Some(last_slash_index) = base.rfind('/') {
-            base.truncate(last_slash_index + 1);
-        }
+    if !base.ends_with('/')
+        && let Some(last_slash_index) = base.rfind('/')
+    {
+        base.truncate(last_slash_index + 1);
     }
 
-    if relative_path.starts_with('/') {
-        if let Ok(url) = Url::parse(&base) {
-            return format!(
-                "{}://{}{}",
-                url.scheme(),
-                url.host_str().unwrap_or(""),
-                relative_path
-            );
-        }
+    if relative_path.starts_with('/')
+        && let Ok(url) = Url::parse(&base)
+    {
+        return format!(
+            "{}://{}{}",
+            url.scheme(),
+            url.host_str().unwrap_or(""),
+            relative_path
+        );
     }
 
     if relative_path.starts_with("../") {
@@ -12172,52 +12172,53 @@ segment0.ts
                 .contains_key("play+1")
         );
 
-        let captured_payloads = captured_payloads.lock().expect("captured payloads");
-        assert_eq!(captured_payloads.len(), 1);
-        assert_eq!(
-            captured_payloads[0].get("strategy").and_then(Value::as_str),
-            Some("web-first")
-        );
-        assert_eq!(
-            captured_payloads[0].get("domains"),
-            Some(&json!(["favorites"])),
-            "only selected profile domains must be sent to the Web merge route"
-        );
-        assert_eq!(
-            captured_payloads[0]
-                .get("snapshot")
-                .and_then(|value| value.get("favorites"))
-                .and_then(|value| value.get("fav+1"))
-                .and_then(|value| value.get("title"))
-                .and_then(Value::as_str),
-            Some("Demo Favorite")
-        );
-        assert_eq!(
-            captured_payloads[0]
-                .get("snapshot")
-                .and_then(|value| value.get("playRecords")),
-            Some(&json!({}))
-        );
-        assert_eq!(
-            captured_payloads[0]
-                .get("snapshot")
-                .and_then(|value| value.get("follows")),
-            Some(&json!({}))
-        );
-        assert_eq!(
-            captured_payloads[0]
-                .get("snapshot")
-                .and_then(|value| value.get("searchHistory")),
-            Some(&json!([]))
-        );
-        assert_eq!(
-            captured_payloads[0]
-                .get("snapshot")
-                .and_then(|value| value.get("skipConfigs")),
-            Some(&json!({}))
-        );
-        assert_eq!(captured_payloads[0].get("adminConfig"), None);
-        drop(captured_payloads);
+        {
+            let captured_payloads = captured_payloads.lock().expect("captured payloads");
+            assert_eq!(captured_payloads.len(), 1);
+            assert_eq!(
+                captured_payloads[0].get("strategy").and_then(Value::as_str),
+                Some("web-first")
+            );
+            assert_eq!(
+                captured_payloads[0].get("domains"),
+                Some(&json!(["favorites"])),
+                "only selected profile domains must be sent to the Web merge route"
+            );
+            assert_eq!(
+                captured_payloads[0]
+                    .get("snapshot")
+                    .and_then(|value| value.get("favorites"))
+                    .and_then(|value| value.get("fav+1"))
+                    .and_then(|value| value.get("title"))
+                    .and_then(Value::as_str),
+                Some("Demo Favorite")
+            );
+            assert_eq!(
+                captured_payloads[0]
+                    .get("snapshot")
+                    .and_then(|value| value.get("playRecords")),
+                Some(&json!({}))
+            );
+            assert_eq!(
+                captured_payloads[0]
+                    .get("snapshot")
+                    .and_then(|value| value.get("follows")),
+                Some(&json!({}))
+            );
+            assert_eq!(
+                captured_payloads[0]
+                    .get("snapshot")
+                    .and_then(|value| value.get("searchHistory")),
+                Some(&json!([]))
+            );
+            assert_eq!(
+                captured_payloads[0]
+                    .get("snapshot")
+                    .and_then(|value| value.get("skipConfigs")),
+                Some(&json!({}))
+            );
+            assert_eq!(captured_payloads[0].get("adminConfig"), None);
+        }
 
         let status_response = app
             .oneshot(
@@ -12472,10 +12473,11 @@ segment0.ts
         let payload = read_json_body(response).await;
         assert_eq!(payload.get("syncDomains"), Some(&json!(["adminsettings"])));
 
-        let captured_payloads = captured_payloads.lock().expect("captured payloads");
-        assert_eq!(captured_payloads.len(), 1);
-        assert_eq!(captured_payloads[0].get("adminConfig"), None);
-        drop(captured_payloads);
+        {
+            let captured_payloads = captured_payloads.lock().expect("captured payloads");
+            assert_eq!(captured_payloads.len(), 1);
+            assert_eq!(captured_payloads[0].get("adminConfig"), None);
+        }
 
         let admin_response = app
             .oneshot(
@@ -13322,10 +13324,11 @@ segment0.ts
             Some(0)
         );
 
-        let captured_payloads = captured_payloads.lock().expect("captured payloads");
-        assert_eq!(captured_payloads.len(), 1);
-        assert_eq!(captured_payloads[0].get("adminConfig"), None);
-        drop(captured_payloads);
+        {
+            let captured_payloads = captured_payloads.lock().expect("captured payloads");
+            assert_eq!(captured_payloads.len(), 1);
+            assert_eq!(captured_payloads[0].get("adminConfig"), None);
+        }
 
         let admin_response = app
             .oneshot(

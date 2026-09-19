@@ -55,7 +55,7 @@ impl AddonHost {
         }
     }
 
-    pub fn add(mut self, addon: Arc<dyn Addon>) -> Self {
+    pub fn with_addon(mut self, addon: Arc<dyn Addon>) -> Self {
         self.addons.push(addon);
         self
     }

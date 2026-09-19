@@ -248,16 +248,15 @@ impl DesktopDownloadEngine {
     ) -> Result<&DesktopDownloadEngineSnapshot, String> {
         task.validate()?;
         let mut normalized_task = task.normalize();
-        if let Some(existing_task) = self.snapshot.tasks.get(&normalized_task.id) {
-            if existing_task.status == DesktopDownloadTaskStatus::Downloading
-                && matches!(
-                    normalized_task.status,
-                    DesktopDownloadTaskStatus::Queued | DesktopDownloadTaskStatus::Paused
-                )
-            {
-                normalized_task =
-                    merge_live_download_task_metadata(existing_task.clone(), normalized_task);
-            }
+        if let Some(existing_task) = self.snapshot.tasks.get(&normalized_task.id)
+            && existing_task.status == DesktopDownloadTaskStatus::Downloading
+            && matches!(
+                normalized_task.status,
+                DesktopDownloadTaskStatus::Queued | DesktopDownloadTaskStatus::Paused
+            )
+        {
+            normalized_task =
+                merge_live_download_task_metadata(existing_task.clone(), normalized_task);
         }
         let task_id = normalized_task.id.clone();
         let status = normalized_task.status;

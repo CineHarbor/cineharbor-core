@@ -135,13 +135,13 @@ pub(crate) fn parse_detail_payload(
         value_to_string(video_detail.get("vod_play_url")).as_deref(),
     );
 
-    if episodes.is_empty() {
-        if let Some(content) = value_to_string(video_detail.get("vod_content")) {
-            episodes = extract_m3u8_matches(&content);
-            episode_titles = (1..=episodes.len())
-                .map(|index| index.to_string())
-                .collect::<Vec<_>>();
-        }
+    if episodes.is_empty()
+        && let Some(content) = value_to_string(video_detail.get("vod_content"))
+    {
+        episodes = extract_m3u8_matches(&content);
+        episode_titles = (1..=episodes.len())
+            .map(|index| index.to_string())
+            .collect::<Vec<_>>();
     }
 
     Some(SearchResult {

@@ -31,6 +31,14 @@ pub(crate) enum OnlineVodCachePolicy {
     Key,
 }
 
+/// Lifetime and ownership of a cache write. A retired prefetch session may not commit.
+#[derive(Clone, Copy, Debug)]
+pub(crate) struct OnlineVodCacheWriteContext<'a> {
+    pub(crate) policy: OnlineVodCachePolicy,
+    pub(crate) now_ms: u64,
+    pub(crate) prefetch_session_id: Option<&'a str>,
+}
+
 impl OnlineVodCachePolicy {
     fn ttl_ms(self) -> u64 {
         match self {
@@ -162,9 +170,11 @@ impl OnlineVodCache {
             status,
             content_type,
             body,
-            policy,
-            now_ms,
-            None,
+            crate::online_vod_cache::OnlineVodCacheWriteContext {
+                policy,
+                now_ms,
+                prefetch_session_id: None,
+            },
         )
     }
 
@@ -174,18 +184,23 @@ impl OnlineVodCache {
         status: u16,
         content_type: Option<&str>,
         body: &[u8],
-        policy: OnlineVodCachePolicy,
-        now_ms: u64,
-        prefetch_session_id: Option<&str>,
+        context: OnlineVodCacheWriteContext<'_>,
     ) -> io::Result<()> {
+        let OnlineVodCacheWriteContext {
+            policy,
+            now_ms,
+            prefetch_session_id,
+        } = context;
         let Some(mut writer) = self.begin_write(
             request_url,
             status,
             content_type,
             Some(body.len() as u64),
-            policy,
-            now_ms,
-            prefetch_session_id,
+            crate::online_vod_cache::OnlineVodCacheWriteContext {
+                policy,
+                now_ms,
+                prefetch_session_id,
+            },
         )?
         else {
             return Ok(());
@@ -201,10 +216,13 @@ impl OnlineVodCache {
         status: u16,
         content_type: Option<&str>,
         expected_body_len: Option<u64>,
-        policy: OnlineVodCachePolicy,
-        now_ms: u64,
-        prefetch_session_id: Option<&str>,
+        context: OnlineVodCacheWriteContext<'_>,
     ) -> io::Result<Option<OnlineVodCacheWriter>> {
+        let OnlineVodCacheWriteContext {
+            policy,
+            now_ms,
+            prefetch_session_id,
+        } = context;
         if expected_body_len.is_some_and(|length| length > self.max_entry_bytes) {
             return Ok(None);
         }
@@ -667,9 +685,11 @@ mod tests {
                 200,
                 Some("video/mp2t"),
                 b"prefetched",
-                OnlineVodCachePolicy::Segment,
-                2,
-                Some("vod-session"),
+                crate::online_vod_cache::OnlineVodCacheWriteContext {
+                    policy: OnlineVodCachePolicy::Segment,
+                    now_ms: 2,
+                    prefetch_session_id: Some("vod-session"),
+                },
             )
             .expect("store full episode prefetch entry");
 
@@ -697,9 +717,11 @@ mod tests {
                 200,
                 Some("video/mp2t"),
                 b"late-write",
-                OnlineVodCachePolicy::Segment,
-                4,
-                Some("vod-session"),
+                crate::online_vod_cache::OnlineVodCacheWriteContext {
+                    policy: OnlineVodCachePolicy::Segment,
+                    now_ms: 4,
+                    prefetch_session_id: Some("vod-session"),
+                },
             )
             .expect("ignore retired full episode write");
         assert!(
@@ -732,9 +754,11 @@ mod tests {
                     200,
                     Some("video/mp2t"),
                     body,
-                    OnlineVodCachePolicy::Segment,
-                    1,
-                    Some("vod-session"),
+                    crate::online_vod_cache::OnlineVodCacheWriteContext {
+                        policy: OnlineVodCachePolicy::Segment,
+                        now_ms: 1,
+                        prefetch_session_id: Some("vod-session"),
+                    },
                 )
                 .expect("store full episode entry within temporary limit");
         }
@@ -786,9 +810,11 @@ mod tests {
                 200,
                 Some("video/mp2t"),
                 Some(8),
-                OnlineVodCachePolicy::Segment,
-                100,
-                None,
+                crate::online_vod_cache::OnlineVodCacheWriteContext {
+                    policy: OnlineVodCachePolicy::Segment,
+                    now_ms: 100,
+                    prefetch_session_id: None,
+                },
             )
             .expect("start cache write")
             .expect("cache write should be accepted");
