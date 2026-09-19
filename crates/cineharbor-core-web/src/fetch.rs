@@ -39,8 +39,12 @@ async fn fetch_request(request: HttpRequest) -> Result<HttpResponse, HttpError> 
 
     let headers = Object::new();
     for (name, value) in &request.headers {
-        Reflect::set(&headers, &JsValue::from_str(name), &JsValue::from_str(value))
-            .map_err(|error| HttpError::Request(format!("设置 header {name} 失败: {error:?}")))?;
+        Reflect::set(
+            &headers,
+            &JsValue::from_str(name),
+            &JsValue::from_str(value),
+        )
+        .map_err(|error| HttpError::Request(format!("设置 header {name} 失败: {error:?}")))?;
     }
     Reflect::set(&init, &JsValue::from_str("headers"), &headers)
         .map_err(|error| HttpError::Request(format!("设置 headers 失败: {error:?}")))?;
@@ -70,11 +74,9 @@ async fn fetch_request(request: HttpRequest) -> Result<HttpResponse, HttpError> 
         .map_err(|error| HttpError::Request(format!("读取 arrayBuffer 失败: {error:?}")))?
         .dyn_into::<Function>()
         .map_err(|_| HttpError::Request("arrayBuffer 不是函数".to_string()))?;
-    let body = JsFuture::from(Promise::from(
-        array_buffer_fn
-            .call0(&response)
-            .map_err(|error| HttpError::Request(format!("调用 arrayBuffer 失败: {error:?}")))?,
-    ))
+    let body = JsFuture::from(Promise::from(array_buffer_fn.call0(&response).map_err(
+        |error| HttpError::Request(format!("调用 arrayBuffer 失败: {error:?}")),
+    )?))
     .await
     .map_err(|error| HttpError::Request(format!("arrayBuffer 被拒: {error:?}")))?
     .dyn_into::<ArrayBuffer>()
@@ -119,8 +121,7 @@ fn string_err(error: impl std::fmt::Display) -> JsValue {
 /// 失败返回 JS 异常（字符串）。
 #[wasm_bindgen]
 pub async fn addon_manifest_json(base_url: String) -> Result<String, JsValue> {
-    let addon =
-        RemoteAddon::new(base_url, FetchHttpClient).map_err(string_err)?;
+    let addon = RemoteAddon::new(base_url, FetchHttpClient).map_err(string_err)?;
     let manifest = addon.manifest().await.map_err(string_err)?;
     serde_json::to_string(&manifest).map_err(string_err)
 }
@@ -145,7 +146,9 @@ pub async fn addon_catalog_json(
         .catalog(
             ty,
             &id,
-            extra.as_ref().map(|(name, value)| (name.as_str(), value.as_str())),
+            extra
+                .as_ref()
+                .map(|(name, value)| (name.as_str(), value.as_str())),
             skip,
         )
         .await

@@ -104,7 +104,11 @@ impl<C: HttpClient> RemoteAddon<C> {
     }
 
     /// 返回 `Ok(None)` 表示 addon 侧 404（未收录）。
-    pub async fn meta(&self, ty: ContentType, id: &str) -> Result<Option<MetaResponse>, RemoteAddonError> {
+    pub async fn meta(
+        &self,
+        ty: ContentType,
+        id: &str,
+    ) -> Result<Option<MetaResponse>, RemoteAddonError> {
         let url = self.endpoint(&format!("/meta/{ty}/{id}.json"));
         let response = self.client.request(HttpRequest::get(url.as_str())).await?;
         if response.status == StatusCode::NOT_FOUND {
@@ -164,7 +168,7 @@ pub fn first_meta(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::transport::{HttpResponse, HttpRequest};
+    use crate::transport::{HttpRequest, HttpResponse};
     use cineharbor_addon_protocol::{MetaDetail, MetaPreview, Stream};
 
     struct NoopClient;
@@ -236,8 +240,8 @@ mod native_tests {
     use super::*;
     use crate::transport::ReqwestHttpClient;
     use axum::Json;
-    use axum::routing::get;
     use axum::Router;
+    use axum::routing::get;
     use cineharbor_addon_protocol::{MetaDetail, MetaPreview, Resource, Stream};
 
     fn manifest_value() -> Manifest {
@@ -301,21 +305,36 @@ mod native_tests {
             axum::serve(listener, app).await.unwrap();
         });
 
-        let addon = RemoteAddon::new(format!("http://{address}"), ReqwestHttpClient::new()).unwrap();
+        let addon =
+            RemoteAddon::new(format!("http://{address}"), ReqwestHttpClient::new()).unwrap();
 
         assert_eq!(addon.manifest().await.unwrap().id, "mock.catalog");
         assert_eq!(
-            addon.catalog(ContentType::Movie, "top", None, None)
+            addon
+                .catalog(ContentType::Movie, "top", None, None)
                 .await
                 .unwrap()
                 .metas
                 .len(),
             1
         );
-        assert!(addon.meta(ContentType::Movie, "tt1").await.unwrap().is_some());
-        assert!(addon.meta(ContentType::Movie, "nope").await.unwrap().is_none());
+        assert!(
+            addon
+                .meta(ContentType::Movie, "tt1")
+                .await
+                .unwrap()
+                .is_some()
+        );
+        assert!(
+            addon
+                .meta(ContentType::Movie, "nope")
+                .await
+                .unwrap()
+                .is_none()
+        );
         assert_eq!(
-            addon.streams(ContentType::Movie, "tt1")
+            addon
+                .streams(ContentType::Movie, "tt1")
                 .await
                 .unwrap()
                 .streams

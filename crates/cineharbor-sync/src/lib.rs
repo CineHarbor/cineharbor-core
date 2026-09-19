@@ -1,16 +1,16 @@
 use std::sync::Arc;
 
-use reqwest::{
-    Client, Method, StatusCode, Url,
-    cookie::{CookieStore, Jar},
-    header::{ACCEPT, CONTENT_TYPE, COOKIE, SET_COOKIE},
-};
 pub use cineharbor_core::sync::{
     PROFILE_SYNC_ADMIN_SETTINGS_DOMAIN, PROFILE_SYNC_DEFAULT_USER_DATA_DOMAINS,
     PROFILE_SYNC_USER_DATA_DOMAINS, ProfileSyncError, ProfileSyncErrorKind, ProfileSyncSession,
     ProfileSyncSessionMutation, ProfileSyncStatusResponse, RemoteLoginResponse,
     RemoteServerConfigResponse, build_profile_sync_target_url,
     default_profile_sync_selected_domains, session_from_login_response,
+};
+use reqwest::{
+    Client, Method, StatusCode, Url,
+    cookie::{CookieStore, Jar},
+    header::{ACCEPT, CONTENT_TYPE, COOKIE, SET_COOKIE},
 };
 
 #[derive(Debug, Clone, PartialEq, Eq)]

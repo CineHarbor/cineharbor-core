@@ -156,8 +156,7 @@ pub fn session_from_login_response(status: StatusCode, body: &[u8]) -> Option<Pr
     }
 
     let username = normalize_optional_string(login_response.username)?;
-    let role =
-        normalize_optional_string(login_response.role).unwrap_or_else(|| "user".to_string());
+    let role = normalize_optional_string(login_response.role).unwrap_or_else(|| "user".to_string());
 
     Some(ProfileSyncSession { username, role })
 }

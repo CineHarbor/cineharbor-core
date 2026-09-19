@@ -17,8 +17,8 @@ use axum::{Json, Router};
 use serde::Serialize;
 
 use cineharbor_addon_sdk::addon::router as addon_router;
-use cineharbor_core::addons::{merge_catalogs, merge_streams};
 pub use cineharbor_addon_sdk::*;
+use cineharbor_core::addons::{merge_catalogs, merge_streams};
 
 type Addons = Vec<Arc<dyn Addon>>;
 
