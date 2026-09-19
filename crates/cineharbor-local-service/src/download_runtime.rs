@@ -1198,7 +1198,7 @@ fn select_download_playback_manifest_url(content: &str) -> Option<String> {
         index += 2;
     }
 
-    variants.sort_by(|left, right| right.1.cmp(&left.1));
+    variants.sort_by_key(|variant| std::cmp::Reverse(variant.1));
     variants.into_iter().next().map(|item| item.0)
 }
 
@@ -1594,7 +1594,7 @@ fn is_download_runtime_task_running(task: &DesktopDownloadTask) -> bool {
 fn should_flush_download_runtime_progress(downloaded_resources: u32, total_resources: u32) -> bool {
     downloaded_resources == total_resources
         || downloaded_resources == 1
-        || downloaded_resources % 5 == 0
+        || downloaded_resources.is_multiple_of(5)
 }
 
 async fn fetch_and_cache_download_runtime_resource(
@@ -1954,13 +1954,13 @@ async fn execute_download_runtime_task(state: &AppState, task_id: &str) -> Resul
 
 async fn run_download_runtime_task_worker(state: AppState, task_id: String) {
     let execution_result = execute_download_runtime_task(&state, &task_id).await;
-    if let Err(error_message) = execution_result {
-        if let Err(error) = fail_download_runtime_task(&state, &task_id, &error_message).await {
-            warn!(
-                "desktop download runtime task {} failed to record error state: {}",
-                task_id, error.message
-            );
-        }
+    if let Err(error_message) = execution_result
+        && let Err(error) = fail_download_runtime_task(&state, &task_id, &error_message).await
+    {
+        warn!(
+            "desktop download runtime task {} failed to record error state: {}",
+            task_id, error.message
+        );
     }
 
     state

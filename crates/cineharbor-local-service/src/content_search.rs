@@ -365,7 +365,7 @@ fn parse_search_item(item: &Value, api_site: &ApiSite) -> Option<SearchResult> {
 fn build_content_suggestions(query: &str, results: &[SearchResult]) -> Vec<ContentSuggestion> {
     let query_lower = query.to_lowercase();
     let query_words = query_lower
-        .split(|character: char| matches!(character, ' ' | '-' | ':' | '：' | '·' | '、'))
+        .split([' ', '-', ':', '：', '·', '、'])
         .filter(|word| !word.is_empty())
         .collect::<Vec<_>>();
     let mut seen = std::collections::BTreeMap::<String, ContentSuggestion>::new();
@@ -375,7 +375,7 @@ fn build_content_suggestions(query: &str, results: &[SearchResult]) -> Vec<Conte
         .map(|result| result.title.as_str())
         .flat_map(|title| {
             title
-                .split(|character: char| matches!(character, ' ' | '-' | ':' | '：' | '·' | '、'))
+                .split([' ', '-', ':', '：', '·', '、'])
                 .filter(|word| word.chars().count() > 1)
                 .map(str::trim)
                 .filter(|word| !word.is_empty())

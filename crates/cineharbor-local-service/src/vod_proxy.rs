@@ -41,7 +41,7 @@ where
     let caching_aborted = Arc::new(AtomicBool::new(false));
     let writer_aborted = Arc::clone(&caching_aborted);
 
-    let _ = tokio::task::spawn_blocking(move || {
+    drop(tokio::task::spawn_blocking(move || {
         let mut writer = writer;
         let mut completed = false;
 
@@ -65,14 +65,15 @@ where
             }
         }
 
-        if completed && !writer_aborted.load(Ordering::Relaxed) {
-            if let Err(error) = writer.finish() {
-                warn!(
-                    "online VOD segment cache finalize failed; playback stream was already delivered: {error}"
-                );
-            }
+        if completed
+            && !writer_aborted.load(Ordering::Relaxed)
+            && let Err(error) = writer.finish()
+        {
+            warn!(
+                "online VOD segment cache finalize failed; playback stream was already delivered: {error}"
+            );
         }
-    });
+    }));
 
     stream::unfold(
         (upstream_stream, sender, caching_aborted),
@@ -363,7 +364,7 @@ pub(crate) async fn get_vod_m3u8(
             crate::build_local_request_url(&state.public_base_url, &original_uri);
         let cache_content_type = meta.content_type.clone();
         let cache_content = response_content.clone().into_bytes();
-        let _ = tokio::task::spawn_blocking(move || {
+        drop(tokio::task::spawn_blocking(move || {
             cache_state.cache_online_vod_asset(
                 &cache_request_url,
                 meta.status,
@@ -371,7 +372,7 @@ pub(crate) async fn get_vod_m3u8(
                 &cache_content,
                 crate::OnlineVodCachePolicy::Manifest,
             );
-        });
+        }));
     }
     let mut response = if method == Method::HEAD {
         Response::new(Body::empty())
@@ -532,7 +533,7 @@ pub(crate) async fn get_vod_key(
             crate::build_local_request_url(&state.public_base_url, &original_uri);
         let cache_content_type = meta.content_type.clone();
         let cache_body = key_bytes.to_vec();
-        let _ = tokio::task::spawn_blocking(move || {
+        drop(tokio::task::spawn_blocking(move || {
             cache_state.cache_online_vod_asset(
                 &cache_request_url,
                 meta.status,
@@ -540,7 +541,7 @@ pub(crate) async fn get_vod_key(
                 &cache_body,
                 crate::OnlineVodCachePolicy::Key,
             );
-        });
+        }));
     }
     let mut response = if method == Method::HEAD {
         Response::new(Body::empty())

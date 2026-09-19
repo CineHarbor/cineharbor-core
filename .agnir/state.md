@@ -11,9 +11,9 @@ Target: CineHarbor **1.0.0**, release preparation in progress; **RELEASE_READY =
 
 ## CI and reproducibility
 
-`ci/dependency.json` pins the sibling SDK revision. `scripts/ci-checkout.py` creates its explicit sibling layout and verifies the immutable revision. Rust is pinned to 1.98.1 with rustfmt, clippy and wasm32. CI has independent fmt, check, test, clippy and WASM lanes with fail-fast disabled. Formatting selects every owned workspace member and never formats sibling dependencies. The maintenance workflow publishes only deterministic owned Rust formatting plus checkpoint evidence and dispatches CI on the resulting revision; formatting success is not build/runtime acceptance.
+`ci/dependency.json` pins the sibling SDK revision. `scripts/ci-checkout.py` creates its explicit sibling layout and verifies the immutable revision. Rust is pinned to 1.98.1 with rustfmt, clippy and wasm32. CI has independent fmt, check, test, clippy and WASM lanes with fail-fast disabled. Formatting selects every owned workspace member and never formats sibling dependencies. The one-time formatter has been retired after normalization. A successful main push dispatches exactly one second clean CI run; manual runs never recursively dispatch. Formatting alone is not build/runtime acceptance.
 
-Baseline `05989fb6f2fe388d8eaeb4128445ac4c61662f5a`, run `35382333866`: fmt failed and downstream check/test/clippy were skipped. New gates and formatting repair are pending observed execution. No previous locally reported tests are promoted to current main release evidence.
+Baseline `05989fb6f2fe388d8eaeb4128445ac4c61662f5a`, run `35382333866`, failed formatting and skipped later checks. After normalization, main `0de339fcd36427fbd9d3d5485949d8ec4c672f93`, run `35417912346`, actually passed fmt/check/test/WASM and failed clippy. This checkpoint fixes lint without suppressing warnings: a named addon builder, named cache-write/Douban filter parameters, lexical mutex scopes and explicit detached blocking cache tasks, plus compiler-suggested simplifications. Local pinned-toolchain strict clippy passed; all 161 native tests passed with zero failures/ignores; the doc-test command completed (no examples present); release WASM compiled. Remote main results for this changed source and browser/product/production acceptance remain pending.
 
 ## Continuity
 

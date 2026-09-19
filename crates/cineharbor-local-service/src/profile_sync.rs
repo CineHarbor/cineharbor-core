@@ -281,10 +281,10 @@ pub(crate) fn response_from_parts(
         .body(Body::from(body))
         .map_err(|error| AppError::internal(error.to_string()))?;
 
-    if let Some(content_type) = content_type {
-        if let Ok(content_type) = HeaderValue::from_str(content_type) {
-            response.headers_mut().insert(CONTENT_TYPE, content_type);
-        }
+    if let Some(content_type) = content_type
+        && let Ok(content_type) = HeaderValue::from_str(content_type)
+    {
+        response.headers_mut().insert(CONTENT_TYPE, content_type);
     }
 
     response

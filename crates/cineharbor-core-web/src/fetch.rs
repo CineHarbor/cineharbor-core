@@ -84,16 +84,13 @@ async fn fetch_request(request: HttpRequest) -> Result<HttpResponse, HttpError> 
     let body = Uint8Array::new(&body).to_vec();
 
     let mut response_headers = Vec::new();
-    if let Ok(headers_obj) = Reflect::get(&response, &JsValue::from_str("headers")) {
-        if let Ok(get_fn) = Reflect::get(&headers_obj, &JsValue::from_str("get")) {
-            if let Ok(get_fn) = get_fn.dyn_into::<Function>() {
-                if let Ok(value) = get_fn.call1(&headers_obj, &JsValue::from_str("content-type")) {
-                    if let Some(value) = value.as_string() {
-                        response_headers.push(("content-type".to_string(), value));
-                    }
-                }
-            }
-        }
+    if let Ok(headers_obj) = Reflect::get(&response, &JsValue::from_str("headers"))
+        && let Ok(get_fn) = Reflect::get(&headers_obj, &JsValue::from_str("get"))
+        && let Ok(get_fn) = get_fn.dyn_into::<Function>()
+        && let Ok(value) = get_fn.call1(&headers_obj, &JsValue::from_str("content-type"))
+        && let Some(value) = value.as_string()
+    {
+        response_headers.push(("content-type".to_string(), value));
     }
 
     Ok(HttpResponse {
