@@ -30,6 +30,16 @@ async fn fetch_request(request: HttpRequest) -> Result<HttpResponse, HttpError> 
         .map_err(|_| HttpError::Connect("全局 fetch 不是函数".to_string()))?;
 
     let init = Object::new();
+    // Addon metadata may contain expiring media capabilities. Renewal must reach the addon,
+    // without leaking page referrers or ambient cookies into a third-party content service.
+    for (name, value) in [
+        ("cache", "no-store"),
+        ("credentials", "omit"),
+        ("referrerPolicy", "no-referrer"),
+    ] {
+        Reflect::set(&init, &JsValue::from_str(name), &JsValue::from_str(value))
+            .map_err(|_| HttpError::Request("设置 addon 请求隐私策略失败".to_string()))?;
+    }
     Reflect::set(
         &init,
         &JsValue::from_str("method"),
