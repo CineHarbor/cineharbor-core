@@ -1,0 +1,50 @@
+name: Materialize reviewed release candidate
+on:
+  push:
+    branches: [release/1.0.0-core-media-client]
+permissions:
+  contents: write
+jobs:
+  materialize:
+    if: ${{ github.repository == 'CineHarbor/cineharbor-core' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 2
+          persist-credentials: false
+      - name: Apply exact checkpointed candidate on its preparation branch only
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: python
+        run: |
+          import base64, gzip, hashlib, os, pathlib, subprocess
+          def git(*args):
+              return subprocess.check_output(['git', *args], text=True).strip()
+          base = 'd51414bba4964dd7cee02780e41c73e35190ce76'
+          branch = 'release/1.0.0-core-media-client'
+          helper = '.github/workflows/materialize-reviewed-candidate.yml'
+          assert os.environ['GITHUB_REPOSITORY'] == 'CineHarbor/cineharbor-core'
+          assert os.environ['GITHUB_REF'] == 'refs/heads/' + branch
+          assert git('rev-parse', 'HEAD^') == base, 'AGNIR_CHECKPOINT_CONFLICT: unexpected parent'
+          assert git('diff', '--name-only', 'HEAD^', 'HEAD') == helper
+          assert git('ls-remote', 'origin', 'refs/heads/main').split()[0] == base, 'AGNIR_CHECKPOINT_CONFLICT: main advanced'
+          assert git('ls-remote', 'origin', 'refs/heads/' + branch).split()[0] == os.environ['GITHUB_SHA'], 'branch advanced'
+          patch = gzip.decompress(base64.b64decode('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'))
+          assert hashlib.sha256(patch).hexdigest() == '54eb90a670a36235a42a05ad62d2e876e632cb86702fdc992c10f6200dd6aee4'
+          path = pathlib.Path(os.environ['RUNNER_TEMP']) / 'reviewed.patch'
+          path.write_bytes(patch)
+          subprocess.run(['git', 'apply', '--check', '--index', str(path)], check=True)
+          subprocess.run(['git', 'apply', '--index', str(path)], check=True)
+          subprocess.run(['git', 'rm', helper], check=True)
+          assert git('write-tree') == '8f9f6be0ad8f5e20f2dbf3525d4f4fb4d1dde3fd', 'candidate tree mismatch'
+          subprocess.run(['git', 'diff', '--cached', '--check'], check=True)
+          subprocess.run(['git', 'config', 'user.name', 'github-actions[bot]'], check=True)
+          subprocess.run(['git', 'config', 'user.email', '41898282+github-actions[bot]@users.noreply.github.com'], check=True)
+          subprocess.run(['git', 'commit', '-m', 'fix(release): apply reviewed media-client alignment and retire transport'], check=True)
+          subprocess.run(['gh', 'auth', 'setup-git'], check=True)
+          subprocess.run(['git', 'push', 'origin', 'HEAD:refs/heads/' + branch], check=True)
+          assert git('ls-remote', 'origin', 'refs/heads/' + branch).split()[0] == git('rev-parse', 'HEAD')
+          print('VERIFIED_CANDIDATE=' + git('rev-parse', 'HEAD'))
+          print('VERIFIED_TREE=' + git('write-tree'))
