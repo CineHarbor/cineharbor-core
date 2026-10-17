@@ -1,7 +1,6 @@
-# cineharbor-core Next Actions
+# cineharbor-core Next Actions — 2026-10-18
 
-1. Require all five independent PR CI lanes, then two complete executions at the exact merged main SHA for this SDK lock/fetch-policy integration. Do not project predecessor results onto it.
-2. Advance Web to the verified Core main plus SDK 3ab4ff8, migrate opaque media capabilities and cache/renewal behavior, then advance Desktop to the verified frontend/Core/SDK unit.
-3. Finish ADR-0006 consumer audit without deleting live capabilities. Verify retained native control/service authentication and diagnostics.
-4. Validate browser/native/download paths, security/dependencies/licenses and signed installed/updater/data-retention acceptance in the seven-repository release matrix.
-5. Keep the canonical facade evidence current. Final public publication is outside the preparation scope; release_ready remains false until every mandatory acceptance gate is observed passing.
+1. Require SDK 10ce024c9f5b1ea739fca9e239488ee4411f403c to pass two complete main CI executions, then verify this Core lock/pin candidate PR across fmt/check/test/clippy/WASM lanes and two final main runs.
+2. Advance Web to Core final SHA and SDK 10ce024c9f5b1ea739fca9e239488ee4411f403c without changing media protocol/security; run full Web production/browser/Jest/CI twice. Advance Desktop last, preserving real installed smoke; run three-platform native/install CI twice at final SHA.
+3. Resolve remaining Web Next/Swiper/PostCSS and Desktop rustls/unsound dependencies and complete runtime/production/security/license gates. Do not weaken checks.
+4. Public signing/updater deferred to public release by Principal; release_ready=false and public_release_executed=false.
