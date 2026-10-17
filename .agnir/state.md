@@ -19,3 +19,7 @@ This candidate still requires PR CI and two successful full main runs after merg
 ## Continuity
 
 Project `urn:cineharbor:project:cineharbor-core`; lineage `urn:cineharbor:lineage:cineharbor-core`. Agnir Core/Profile 1.0 / repository-filesystem/1.0 and operations 1.0.2 at `b5626394ec40a5cb7a28c01892acde07cc0adc8e` are unchanged. License baseline CC-BY-NC-SA-4.0.
+
+## 2026-10-18 secure SDK alignment candidate
+
+The verified SDK source security repair merged to 10ce024c9f5b1ea739fca9e239488ee4411f403c (rustls 0.23.45), pending its exact two main passes when this candidate was created. Core's ci/dependency.json now pins this immutable SDK and its own Rust Cargo.lock's rustls entry moves 0.23.43 → 0.23.45 with the official crates.io-index checksum (no blanket resolution changes). This preserves client signed-media wire semantics. Hosted PR check/wasm/test/strict clippy are required; downstream Web/Desktop immutable pins must be repointed after successful Core main matrices. Security/license/production/native final acceptance remains open. RELEASE_READY=false.
